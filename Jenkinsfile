@@ -4,7 +4,7 @@ pipeline {
     environment {
         SONAR_TOKEN = credentials('sonarkey')        
         DOCKER_HUB_CREDENTIALS = 'dockerhub-token' 
-        IMAGE_NAME = 'akilarajkumar/nodejs-devops-project'
+        IMAGE_NAME = 'akilaraamana/nodejs-devops-project'
         IMAGE_TAG = 'latest'
     }
 
