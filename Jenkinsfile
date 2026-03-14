@@ -4,7 +4,6 @@ pipeline {
     environment {
         IMAGE_NAME = "nodejs-devops"
         DOCKERHUB_REPO = "akilaraamana/nodejs-devops"
-        SCANNER_HOME = tool 'sonar-scanner'
     }
 
     stages {
@@ -30,8 +29,11 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('sonarqube-server') {
-                    bat "%SCANNER_HOME%\\bin\\sonar-scanner"
+                script {
+                    def scannerHome = tool 'sonar-scanner'
+                    withSonarQubeEnv('sonarqube-server') {
+                        bat "${scannerHome}\\bin\\sonar-scanner"
+                    }
                 }
             }
         }
@@ -75,6 +77,5 @@ pipeline {
                 """
             }
         }
-
     }
 }
