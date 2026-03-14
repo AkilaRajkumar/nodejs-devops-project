@@ -2,14 +2,19 @@ pipeline {
     agent any
 
     environment {
-        SONAR_HOST_URL = 'http://192.168.56.1:9000'
-        SONAR_TOKEN = 'your_sonarqube_token'
+        // SonarQube token, if analysis is needed
+        SONAR_TOKEN = credentials('sonar-token') // replace with your Jenkins secret ID
+        DOCKER_IMAGE = "akilarajkumar/nodejs-devops-project"
+        DOCKER_TAG = "latest"
     }
 
     stages {
-        stage('Checkout Code') {
+
+        stage('Checkout SCM') {
             steps {
-                git url: 'https://github.com/AkilaRajkumar/nodejs-devops-project.git', branch: 'main'
+                git branch: 'main',
+                    url: 'https://github.com/AkilaRajkumar/nodejs-devops-project.git',
+                    credentialsId: 'github-token'
             }
         }
 
@@ -26,30 +31,45 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
+            environment {
+                // Inject SonarQube environment
+                SONAR_HOST_URL = 'http://192.168.56.1:9000'
+            }
             steps {
                 withSonarQubeEnv('sonarqube-server') {
-                    bat "C:\\ProgramData\\Jenkins\\.jenkins\\tools\\hudson.plugins.sonar.SonarRunnerInstallation\\sonar-scanner\\bin\\sonar-scanner -Dsonar.token=${SONAR_TOKEN}"
+                    bat "C:\\ProgramData\\Jenkins\\.jenkins\\tools\\hudson.plugins.sonar.SonarRunnerInstallation\\sonar-scanner\\bin\\sonar-scanner -Dsonar.login=${SONAR_TOKEN}"
                 }
             }
         }
 
-        // Skip Quality Gate check (optional)
         stage('Docker Build') {
             steps {
-                bat 'docker build -t my-node-app .'
+                bat "docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% ."
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                bat 'docker push my-node-app'
+                bat "docker push %DOCKER_IMAGE%:%DOCKER_TAG%"
             }
         }
 
         stage('Deploy Container') {
             steps {
-                bat 'docker run -d -p 8080:8080 my-node-app'
+                // Stop old container if exists
+                bat "docker rm -f nodejs-devops || echo 'No existing container'"
+                // Run new container
+                bat "docker run -d --name nodejs-devops -p 8080:8080 %DOCKER_IMAGE%:%DOCKER_TAG%"
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
         }
     }
 }
