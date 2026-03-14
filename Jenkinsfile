@@ -2,83 +2,74 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'akilaraamana/nodejs-devops-project'
-        IMAGE_TAG  = 'latest'
-        CONTAINER_NAME = 'nodejs-devops'
-        HOST_PORT = '8080'
-        CONTAINER_PORT = '8080'
-        SONAR_SERVER = 'SonarQube'       // Your Jenkins SonarQube server name
-        SONAR_KEY = credentials('sonarkey')   // Jenkins credential ID for SonarQube token
-        DOCKERHUB_TOKEN = credentials('dockerhub-token') // Jenkins credential ID for DockerHub token
+        IMAGE_NAME = "nodejs-devops"
+        DOCKERHUB_REPO = "akilaraamana/nodejs-devops"
+        SONAR_KEY = credentials('sonarkey')  // Updated token
     }
 
     stages {
-        stage('Checkout') {
+
+        stage('Checkout Code') {
             steps {
-                checkout scm
+                git branch: 'main',
+                url: 'https://github.com/AkilaRajkumar/nodejs-devops-project.git'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                bat 'npm install'
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                bat 'npm test'
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv("${SONAR_SERVER}") {
-                    bat "sonar-scanner -Dsonar.projectKey=nodejs-devops-project -Dsonar.sources=. -Dsonar.host.url=%SONAR_HOST_URL% -Dsonar.login=${SONAR_KEY}"
-                }
-            }
-        }
-
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                bat "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                withDockerRegistry(credentialsId: 'DOCKERHUB_TOKEN', url: '') {
-                    bat "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-                }
-            }
-        }
-
-        stage('Stop Existing Container & Free Port') {
-            steps {
                 script {
-                    // Remove existing container
-                    bat "for /f %%i in ('docker ps -a -q --filter name=${CONTAINER_NAME}') do docker rm -f %%i"
-
-                    // Kill any process using HOST_PORT
-                    def portCheck = bat(script: "netstat -ano | findstr :${HOST_PORT}", returnStdout: true).trim()
-                    if (portCheck) {
-                        def pid = portCheck.tokenize()[-1]
-                        echo "Killing process ${pid} using port ${HOST_PORT}"
-                        bat "taskkill /F /PID ${pid}"
+                    def scannerHome = tool 'sonar-scanner'
+                    withSonarQubeEnv('sonarqube-server') {
+                        bat "${scannerHome}\\bin\\sonar-scanner -Dsonar.login=%SONAR_KEY%"
                     }
                 }
             }
         }
 
-        stage('Run Docker Container') {
+        
+
+        stage('Docker Build') {
             steps {
-                bat "docker run -d --name ${CONTAINER_NAME} -p ${HOST_PORT}:${CONTAINER_PORT} ${IMAGE_NAME}:${IMAGE_TAG}"
+                bat "docker build -t %DOCKERHUB_REPO%:latest ."
             }
         }
-    }
 
-    post {
-        failure {
-            echo "Pipeline failed! Check logs."
+        stage('Push Image') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-token',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    bat """
+                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                    docker push %DOCKERHUB_REPO%:latest
+                    """
+                }
+            }
         }
-        success {
-            echo "Pipeline succeeded! Docker container running on port ${HOST_PORT}."
+
+        stage('Deploy Container') {
+            steps {
+                bat """
+                docker stop nodejs-container || echo Container not running
+                docker rm nodejs-container || echo Container not found
+                docker run -d -p 3000:3000 --name nodejs-container %DOCKERHUB_REPO%:latest
+                """
+            }
         }
     }
 }
