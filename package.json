@@ -1,0 +1,9 @@
+{
+	  "name": "nodejs-devops-project",
+	    "version": "1.0.0",
+	      "description": "Simple DevOps CI/CD Project",
+	        "main": "app.js",
+		  "scripts": {
+			      "test": "node test.js"
+			        }
+}
