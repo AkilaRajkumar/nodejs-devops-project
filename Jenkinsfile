@@ -39,7 +39,13 @@ pipeline {
             }
         }
 
-        
+          stage('Quality Gate') {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {   // Changed to 30 seconds
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
 
         stage('Docker Build') {
             steps {
