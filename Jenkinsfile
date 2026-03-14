@@ -4,11 +4,6 @@ pipeline {
     environment {
         IMAGE_NAME = "nodejs-devops"
         DOCKERHUB_REPO = "akilaraamana/nodejs-devops"
-        DOCKER_CREDENTIALS = "dockerhub-token"
-    }
-
-    tools {
-        nodejs "nodejs"
     }
 
     stages {
