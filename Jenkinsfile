@@ -1,4 +1,3 @@
-```groovy
 pipeline {
     agent any
 
@@ -17,7 +16,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/AkilaRajkumar/nodejs-devops-project.git'
+                url: 'https://github.com/AkilaRajkumar/nodejs-devops-project.git'
             }
         }
 
@@ -36,7 +35,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonarqube-server') {
-                    bat 'sonar-scanner.bat'
+                    bat 'sonar-scanner'
                 }
             }
         }
@@ -49,7 +48,7 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                bat "docker build -t %DOCKERHUB_REPO%:latest ."
+                bat 'docker build -t %DOCKERHUB_REPO%:latest .'
             }
         }
 
@@ -60,6 +59,7 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
+
                     bat """
                     echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
                     docker push %DOCKERHUB_REPO%:latest
@@ -77,6 +77,6 @@ pipeline {
                 """
             }
         }
+
     }
 }
-```
