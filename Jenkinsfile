@@ -4,6 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = "nodejs-devops"
         DOCKERHUB_REPO = "akilaraamana/nodejs-devops"
+        SCANNER_HOME = tool 'sonar-scanner'
     }
 
     stages {
@@ -30,20 +31,22 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonarqube-server') {
-                    bat 'sonar-scanner'
+                    bat "%SCANNER_HOME%\\bin\\sonar-scanner"
                 }
             }
         }
 
         stage('Quality Gate') {
             steps {
-                waitForQualityGate abortPipeline: true
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
 
         stage('Docker Build') {
             steps {
-                bat 'docker build -t %DOCKERHUB_REPO%:latest .'
+                bat "docker build -t %DOCKERHUB_REPO%:latest ."
             }
         }
 
