@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // SonarQube token, if analysis is needed
-        SONAR_TOKEN = credentials('sonar-token') // replace with your Jenkins secret ID
+        SONAR_TOKEN = credentials('sonarkey') 
         DOCKER_IMAGE = "akilarajkumar/nodejs-devops-project"
         DOCKER_TAG = "latest"
     }
